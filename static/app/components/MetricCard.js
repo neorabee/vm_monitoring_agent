@@ -1,18 +1,22 @@
 'use client';
 
-export default function MetricCard({ title, icon, iconColor = 'cyan', badge, span = 4, children, delayClass = '' }) {
-  const accentMap = {
-    cyan: 'var(--accent-cyan)',
-    violet: 'var(--accent-violet)',
-    emerald: 'var(--accent-emerald)',
-    amber: 'var(--accent-amber)',
-    rose: 'var(--accent-rose)',
-  };
+export default function MetricCard({
+  title,
+  icon,
+  iconColor = 'cyan',
+  badge,
+  span = 4,
+  children,
+  delayClass = '',
+  accent,
+}) {
+  const accentName = accent || iconColor;
 
   return (
     <div
       className={`metric-card span-${span} fade-in ${delayClass}`}
-      style={{ '--card-accent': accentMap[iconColor] || accentMap.cyan }}
+      data-accent={accentName}
+      id={`card-${title?.replace(/\s+/g, '-')?.toLowerCase() || 'default'}`}
     >
       <div className="card-header">
         <div className="card-label">
@@ -21,7 +25,10 @@ export default function MetricCard({ title, icon, iconColor = 'cyan', badge, spa
         </div>
         {badge && <span className="card-badge">{badge}</span>}
       </div>
-      {children}
+      <div className="card-body">
+        {children}
+      </div>
     </div>
   );
 }
+

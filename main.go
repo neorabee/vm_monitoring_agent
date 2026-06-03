@@ -12,6 +12,14 @@ import (
 	"time"
 )
 
+type NetStack struct {
+	RxBytes, TxBytes uint64
+}
+
+type NetUsage struct {
+	RxKBps, TxKBps float64
+}
+
 type LoadAvg struct {
 	min1, min5, min15 float64
 }
@@ -29,6 +37,59 @@ type Uptime struct {
 
 type DiskUsage struct {
 	Total, Free, Used uint64
+}
+
+func readNet() (NetStack, error) {
+	data, err := os.ReadFile("/proc/net/dev")
+	if err != nil {
+		return NetStack{}, err
+	}
+	lines := strings.Split(string(data), "\n")
+	var network []string
+	for _, line := range lines[2:] {
+		if strings.HasPrefix(strings.TrimSpace(line), "enp0s3:") {
+			network = strings.Fields(line)
+			break
+		}
+	}
+
+	rxbytes, err := strconv.ParseInt(network[1], 10, 64)
+	if err != nil {
+		return NetStack{}, err
+	}
+	txbytes, err := strconv.ParseInt(network[9], 10, 64)
+	if err != nil {
+		return NetStack{}, err
+	}
+	return NetStack{
+		RxBytes: uint64(rxbytes),
+		TxBytes: uint64(txbytes),
+	}, nil
+}
+
+func NetUse() (NetUsage, error) {
+	net, err := readNet()
+	if err != nil {
+		return NetUsage{}, err
+	}
+	r1 := net.RxBytes
+	t1 := net.TxBytes
+	time.Sleep(1 * time.Second)
+	net2, err := readNet()
+	if err != nil {
+		return NetUsage{}, err
+	}
+	r2 := net2.RxBytes
+	t2 := net2.TxBytes
+
+	rdelta := r2 - r1
+	tdelta := t2 - t1
+
+	return NetUsage{
+		RxKBps: float64(rdelta) / 1024,
+		TxKBps: float64(tdelta) / 1024,
+	}, nil
+
 }
 
 func readDiskUsage() (DiskUsage, error) {
@@ -176,13 +237,15 @@ type Metrics struct {
 	DiskAvailable float64 `json:"disk_available"`
 	DiskTotal     float64 `json:"disk_total"`
 	DiskUsed      float64 `json:"disk_used"`
+	DownloadKBps  float64 `json:"download_kbps"`
+	UploadKBps    float64 `json:"upload_kbps"`
 }
 
-func home(w http.ResponseWriter, r *http.Request) {
-
-	fmt.Fprintf(w, "Hello from the monitoring agent")
-}
 func collectMetrics() (Metrics, error) {
+	netuse, err := NetUse()
+	if err != nil {
+		return Metrics{}, err
+	}
 	uptime, err := readUptime()
 	if err != nil {
 		return Metrics{}, err
@@ -245,6 +308,8 @@ func collectMetrics() (Metrics, error) {
 		DiskAvailable: FreeDiskGB,
 		DiskTotal:     totalDiskGB,
 		DiskUsed:      UsedDiskGB,
+		DownloadKBps:  netuse.RxKBps,
+		UploadKBps:    netuse.TxKBps,
 	}
 	return metrics, nil
 }
