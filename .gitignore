@@ -28,6 +28,8 @@ node_modules/
 # Next.js build output
 .next/
 out/
+#testing 
+testing/
 
 # production build
 build/
