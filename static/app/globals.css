@@ -583,6 +583,40 @@ body::after {
   letter-spacing: 0.5px;
 }
 
+/* ── Header Uptime (compact) ── */
+.header-uptime {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 14px;
+  background: rgba(16, 185, 129, 0.06);
+  border: 1px solid rgba(16, 185, 129, 0.15);
+  border-radius: var(--radius-full);
+}
+
+.header-uptime-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--accent-emerald);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+}
+
+.header-uptime-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-bright);
+  letter-spacing: 0.5px;
+}
+
+.header-uptime-unit {
+  font-size: 10px;
+  color: var(--text-muted);
+  font-weight: 500;
+  margin-left: 1px;
+}
+
 
 /* ═══════════════════════════════════════════════════════════════════════
    STAT SUMMARY ROW (Top highlight cards)
@@ -1929,32 +1963,182 @@ body::after {
   color: var(--text-bright);
 }
 
-.header-uptime {
+
+/* ═══════════════════════════════════════════════════════════════════════
+   PROCESS CHART
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ── Empty State ── */
+.process-empty {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 10px;
-  padding: 7px 14px;
-  background: rgba(16, 185, 129, 0.06);
-  border: 1px solid rgba(16, 185, 129, 0.15);
-  border-radius: var(--radius-full);
+  padding: 40px 0;
+  color: var(--text-muted);
+  font-size: 14px;
+  font-weight: 500;
 }
-.header-uptime-label {
-  font-size: 10px;
+
+.process-empty-icon {
+  font-size: 20px;
+  opacity: 0.5;
+}
+
+/* ── Layout: Donut + List ── */
+.process-chart-layout {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  gap: 32px;
+  align-items: start;
+}
+
+/* ── Donut ── */
+.process-donut-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.process-donut-svg {
+  width: 180px;
+  height: 180px;
+  transform: rotate(-90deg);
+}
+
+.process-donut-center {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.process-donut-count {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 28px;
   font-weight: 700;
-  color: var(--accent-emerald);
-  text-transform: uppercase;
-  letter-spacing: 1.5px;
+  color: var(--text-bright);
+  line-height: 1;
 }
-.header-uptime-value {
+
+.process-donut-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+}
+
+/* ── Process List ── */
+.process-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.process-row {
+  display: grid;
+  grid-template-columns: 10px 140px 1fr 80px 56px;
+  gap: 12px;
+  align-items: center;
+  padding: 8px 12px;
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.015);
+  border: 1px solid transparent;
+  transition: all var(--transition-fast);
+}
+
+.process-row:hover {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: var(--border-subtle);
+}
+
+/* Color dot */
+.process-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* Name + PID */
+.process-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.process-name {
   font-family: 'JetBrains Mono', monospace;
   font-size: 13px;
   font-weight: 600;
-  color: var(--text-bright);
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.process-pid {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--text-dim);
   letter-spacing: 0.5px;
 }
-.header-uptime-unit {
-  font-size: 10px;
-  color: var(--text-muted);
+
+/* Bar */
+.process-bar-track {
+  height: 6px;
+  border-radius: var(--radius-full);
+  background: rgba(255, 255, 255, 0.04);
+  overflow: hidden;
+  position: relative;
+}
+
+.process-bar-fill {
+  height: 100%;
+  border-radius: var(--radius-full);
+  transition: width 600ms var(--ease-out-expo);
+  min-width: 3px;
+}
+
+/* Memory value */
+.process-mem {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
   font-weight: 500;
-  margin-left: 1px;
+  color: var(--text-secondary);
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* Percent badge */
+.process-pct {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: var(--radius-full);
+  text-align: center;
+  white-space: nowrap;
+}
+
+/* ── Responsive ── */
+@media (max-width: 900px) {
+  .process-chart-layout {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+
+  .process-donut-container {
+    justify-self: center;
+  }
+
+  .process-row {
+    grid-template-columns: 10px 100px 1fr 64px 50px;
+    gap: 8px;
+    padding: 6px 8px;
+  }
 }

@@ -6,11 +6,18 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 	"syscall"
 	"time"
 )
+
+type Process struct {
+	PID    uint64
+	Memory uint64
+	Name   string
+}
 
 type NetStack struct {
 	RxBytes, TxBytes uint64
@@ -39,6 +46,71 @@ type DiskUsage struct {
 	Total, Free, Used uint64
 }
 
+func readProcesses() ([]Process, error) {
+	var processes []Process
+
+	entries, err := os.ReadDir("/proc")
+	if err != nil {
+		return nil, err
+	}
+
+	for _, entry := range entries {
+
+		pid, err := strconv.Atoi(entry.Name())
+		if err != nil {
+			continue
+		}
+
+		nameData, err := os.ReadFile(
+			fmt.Sprintf("/proc/%d/comm", pid),
+		)
+		if err != nil {
+			continue
+		}
+
+		statusData, err := os.ReadFile(
+			fmt.Sprintf("/proc/%d/status", pid),
+		)
+		if err != nil {
+			continue
+		}
+
+		var memory uint64
+
+		lines := strings.Split(string(statusData), "\n")
+
+		for _, line := range lines {
+			if strings.HasPrefix(line, "VmRSS:") {
+
+				fields := strings.Fields(line)
+
+				memory, err = strconv.ParseUint(
+					fields[1],
+					10,
+					64,
+				)
+
+				if err != nil {
+					memory = 0
+				}
+
+				break
+			}
+		}
+
+		processes = append(processes, Process{
+			PID:    uint64(pid),
+			Name:   strings.TrimSpace(string(nameData)),
+			Memory: memory,
+		})
+	}
+
+	sort.Slice(processes, func(i, j int) bool {
+		return processes[i].Memory > processes[j].Memory
+	})
+
+	return processes, nil
+}
 func readNet() (NetStack, error) {
 	data, err := os.ReadFile("/proc/net/dev")
 	if err != nil {
@@ -225,20 +297,21 @@ func total(s CPUStat) uint64 {
 }
 
 type Metrics struct {
-	Uptime        string  `json:"uptime"`
-	CPUUsage      float64 `json:"cpu_usage"`
-	RAMAvailable  float64 `json:"ram_available"`
-	RAMTotal      float64 `json:"ram_total"`
-	RAMUsed       float64 `json:"ram_used"`
-	RAMUsage      float64 `json:"ram_usage"`
-	LoadAvg1min   float64 `json:"loadavg_1min"`
-	LoadAvg5min   float64 `json:"loadavg_5min"`
-	LoadAvg15min  float64 `json:"loadavg_15min"`
-	DiskAvailable float64 `json:"disk_available"`
-	DiskTotal     float64 `json:"disk_total"`
-	DiskUsed      float64 `json:"disk_used"`
-	DownloadKBps  float64 `json:"download_kbps"`
-	UploadKBps    float64 `json:"upload_kbps"`
+	Uptime        string    `json:"uptime"`
+	CPUUsage      float64   `json:"cpu_usage"`
+	RAMAvailable  float64   `json:"ram_available"`
+	RAMTotal      float64   `json:"ram_total"`
+	RAMUsed       float64   `json:"ram_used"`
+	RAMUsage      float64   `json:"ram_usage"`
+	LoadAvg1min   float64   `json:"loadavg_1min"`
+	LoadAvg5min   float64   `json:"loadavg_5min"`
+	LoadAvg15min  float64   `json:"loadavg_15min"`
+	DiskAvailable float64   `json:"disk_available"`
+	DiskTotal     float64   `json:"disk_total"`
+	DiskUsed      float64   `json:"disk_used"`
+	DownloadKBps  float64   `json:"download_kbps"`
+	UploadKBps    float64   `json:"upload_kbps"`
+	Processes     []Process `json:"processes"`
 }
 
 func collectMetrics() (Metrics, error) {
@@ -285,7 +358,16 @@ func collectMetrics() (Metrics, error) {
 	totalDiskGB := float64(diskusage.Total) / 1024 / 1024 / 1024
 	UsedDiskGB := float64(diskusage.Used) / 1024 / 1024 / 1024
 	FreeDiskGB := float64(diskusage.Free) / 1024 / 1024 / 1024
+
+	processes, err := readProcesses()
+	if err != nil {
+		return Metrics{}, err
+	}
+	if len(processes) > 10 {
+		processes = processes[:10]
+	}
 	metrics := Metrics{
+		Processes: processes,
 		Uptime: fmt.Sprintf(
 			"%dd %dh %dm %ds",
 			uptime.Days,
@@ -325,6 +407,7 @@ func metricsHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(metrics)
 }
+
 func main() {
 	http.Handle("/", http.FileServer(http.Dir("./static")))
 	http.HandleFunc("/metrics", metricsHandler)

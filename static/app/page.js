@@ -13,6 +13,7 @@ import StatList from './components/StatList';
 import NetworkBars from './components/NetworkBars';
 import MetricLineChart from './components/MetricLineChart';
 import LoadAverageChart from './components/LoadAverageChart';
+import ProcessChart from './components/ProcessChart';
 
 export default function Dashboard() {
   const [metrics, setMetrics] = useState(null);
@@ -310,6 +311,19 @@ export default function Dashboard() {
                 </div>
               </div>
             </div>
+          </MetricCard>
+
+          {/* ── ROW 4: Process Memory (full width) ── */}
+          <MetricCard
+            title="Top Processes"
+            icon="⬡"
+            iconColor="emerald"
+            badge={`${metrics?.processes?.length ?? 0} active`}
+            span={12}
+            delayClass="fade-in-7"
+            accent="emerald"
+          >
+            <ProcessChart processes={metrics?.processes} />
           </MetricCard>
 
         </div>
